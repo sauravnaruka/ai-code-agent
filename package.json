@@ -4,12 +4,13 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev2": "node --loader ts-node/esm ./src/main.ts",
-    "dev3": "node --no-warnings=ExperimentalWarning --loader ts-node/esm ./src/main.ts",
     "dev": "tsc --noEmit && tsx ./src/main.ts",
     "start": "node dist/main.js",
     "build": "npx tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --updateSnapshot --coverage",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:debug": "node --inspect-brk ./node_modules/.bin/jest --runInBand"
   },
   "repository": {
     "type": "git",
@@ -29,7 +30,10 @@
     "dotenv": "^16.5.0"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/node": "^24.0.1",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.4.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }
