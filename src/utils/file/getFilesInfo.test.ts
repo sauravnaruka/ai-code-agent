@@ -17,6 +17,9 @@ describe("getFilesInfo", () => {
 
         const pkgJsonPath = path.join(testDir, 'package.json');
         fs.writeFileSync(pkgJsonPath, '{"name": "test"}');
+
+        const subDirReadme = path.join(subDir, 'main.py');
+        fs.writeFileSync(subDirReadme, 'print("Hello from Python!")');
     })
 
     afterAll(() => {
@@ -24,39 +27,34 @@ describe("getFilesInfo", () => {
     });
 
     it("returns list of directory and files inside of directory", () => {
-        const [entries, err] = getFilesInfo(testDir, testDir);
+        const {response, ok} = getFilesInfo(testDir, {directory: "."});
 
-        expect(err).toBeNull();
-        expect(entries.length).toBe(3);
+        expect(ok).toBeTruthy();
+        expect(response).toMatch(/^- src: file_size=\d+ bytes, is_dir=true$/m);
+        expect(response).toMatch(/^- README\.md: file_size=\d+ bytes, is_dir=false$/m);
+        expect(response).toMatch(/^- package\.json: file_size=\d+ bytes, is_dir=false$/m);
+    })
 
-        const sortedEntries = (entries).sort();
-        expect(sortedEntries).toEqual(expect.arrayContaining([
-            expect.stringMatching(/^README\.md: file_size=\d+ bytes, is_dir=false$/),
-            expect.stringMatching(/^package\.json: file_size=\d+ bytes, is_dir=false$/),
-            expect.stringMatching(/^src: file_size=\d+ bytes, is_dir=true$/),
-        ]));
+    it("return the list of files from subdirectory", ()=>{
+        const {response, ok} = getFilesInfo(testDir, {directory: "./src"});
+
+        expect(ok).toBeTruthy();
+        expect(response).toMatch(/^- main\.py: file_size=\d+ bytes, is_dir=false$/m);
     })
 
     it("returns an error when directory is outside the working directory", () => {
         const directory = "../"
-        const [entries, err] = getFilesInfo(testDir, directory);
+        const {response, ok} = getFilesInfo(testDir, {directory});
 
-        expect(err).toBe(`"${directory}" is not a directory`);
-        expect(entries.length).toBe(0);
+        expect(ok).toBeFalsy();
+        expect(response).toContain(`Error: Cannot list "${directory}" as it is outside the permitted working directory`);
     })
 
     it("returns an error when directory does not exist in the working directory", () => {
-        const directory = "/bin"
-        const [entries, err] = getFilesInfo(testDir, directory);
+        const directory = "./bin";
+        const {response, ok}  = getFilesInfo(testDir, {directory: directory});
 
-        expect(err).toBe(`"${directory}" is not a directory`);
-        expect(entries.length).toBe(0);
-    })
-
-    it("returns an error when directory is empty", () => {
-        const [entries, err] = getFilesInfo(testDir, null);
-
-        expect(err).toBe(`directory is required`);
-        expect(entries.length).toBe(0);
+        expect(ok).toBeFalsy();
+        expect(response).toContain(`Error: "${directory}" is not a directory`);
     })
 })

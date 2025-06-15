@@ -5,38 +5,39 @@ import { runPythonFile } from "./runPythonFile"
 
 describe("runPythonFile", () => {
     let testDir: string;
-    let readmeFilePath: string;
-    let sucessFile: string;
-    let errorFile: string;
-    let stderrFile: string;
-    let timeoutFile: string;
-    let noopFile: string;
+    let readmeFileName: string;
+    let sucessFileName: string;
+    let errorFileName: string;
+    let stderrFileName: string;
+    let timeoutFileName: string;
+    let noopFileName: string;
 
     beforeAll(() => {
         testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'test-working-dir-'));
 
-        readmeFilePath = path.join(testDir, 'README.md');
-        fs.writeFileSync(readmeFilePath, 'Sample readme');
+        
+        readmeFileName = 'README.md';
+        fs.writeFileSync(path.join(testDir, readmeFileName), 'Sample readme');
 
         // success.py
-        sucessFile = path.join(testDir, 'success.py');
-        fs.writeFileSync(sucessFile, 'print("Hello from Python!")');
+        sucessFileName = 'success.py';
+        fs.writeFileSync(path.join(testDir, sucessFileName), 'print("Hello from Python!")');
 
         // error.py
-        errorFile = path.join(testDir, 'error.py');
-        fs.writeFileSync(errorFile, 'raise Exception("Boom!")');
+        errorFileName = 'error.py';
+        fs.writeFileSync(path.join(testDir, errorFileName), 'raise Exception("Boom!")');
 
         // stderr.py
-        stderrFile = path.join(testDir, 'stderr.py');
-        fs.writeFileSync(stderrFile, 'import sys; sys.stderr.write("This is an error")');
+        stderrFileName = 'stderr.py';
+        fs.writeFileSync(path.join(testDir, stderrFileName), 'import sys; sys.stderr.write("This is an error")');
 
         // timeout.py
-        timeoutFile = path.join(testDir, 'timeout.py');
-        fs.writeFileSync(timeoutFile, 'import time; time.sleep(35)');
+        timeoutFileName = 'timeout.py';
+        fs.writeFileSync(path.join(testDir, 'timeout.py'), 'import time; time.sleep(35)');
 
         // noop.py
-        noopFile = path.join(testDir, 'noop.py')
-        fs.writeFileSync(noopFile, '')
+        noopFileName = 'noop.py';
+        fs.writeFileSync(path.join(testDir, 'noop.py'), '')
     })
 
     afterAll(() => {
@@ -44,60 +45,70 @@ describe("runPythonFile", () => {
     });
 
     it("returns an error when file outside the working directory", async () => {
-        const filePath = path.join(testDir, "..", "main.py");
+        const filePath = "../main.py";
 
-        const result = await runPythonFile(testDir, filePath);
-        expect(result).toContain(`Error: Cannot execute "${filePath}" as it is outside the permitted working directory`)
+        const {response, ok} = await runPythonFile(testDir, {filePath});
+
+        expect(ok).toBeFalsy();
+        expect(response).toContain(`Error: Cannot execute "${filePath}" as it is outside the permitted working directory`)
     })
     
     it("returns an error when file does not exist", async () => {
-        const filePath = path.join(testDir, "main.py");
+        const filePath = "main.py";
 
-        const result = await runPythonFile(testDir, filePath);
-        expect(result).toContain(`Error: File "${filePath}" not found.`)
+        const {response, ok} = await runPythonFile(testDir, {filePath});
+
+        expect(ok).toBeFalsy();
+        expect(response).toContain(`Error: File "${filePath}" not found.`)
     })
 
     it("returns an error when file is invalid python file", async () => {
-
-        const result = await runPythonFile(testDir, readmeFilePath);
-        expect(result).toContain(`Error: "${readmeFilePath}" is not a Python file.`)
+        const {response, ok} = await runPythonFile(testDir, {filePath: readmeFileName});
+        
+        expect(ok).toBeFalsy();
+        expect(response).toContain(`Error: "${readmeFileName}" is not a Python file.`)
     })
 
     it("captures stdout from a successful script", async () => {
-        const result = await runPythonFile(testDir, sucessFile);
+        const {response, ok} = await runPythonFile(testDir, {filePath: sucessFileName});
 
-        expect(result).toContain("STDOUT:");
-        expect(result).toContain("Hello from Python!");
+        expect(ok).toBeTruthy();
+        expect(response).toContain("STDOUT:");
+        expect(response).toContain("Hello from Python!");
     });
 
     it("captures stderr and non-zero exit code", async () => {
-        const result = await runPythonFile(testDir, errorFile);
+        const {response, ok} = await runPythonFile(testDir, {filePath: errorFileName});
 
-        expect(result).toContain("STDERR:");
-        expect(result).toContain("Exception");
-        expect(result).toContain("Process exited with code");
+        expect(ok).toBeTruthy(); // Exception in the code but not in our execution
+        expect(response).toContain("STDERR:");
+        expect(response).toContain("Exception");
+        expect(response).toContain("Process exited with code");
     });
 
     it("captures just stderr from a script", async () => {
-        const result = await runPythonFile(testDir, stderrFile);
+        const {response, ok} = await runPythonFile(testDir, {filePath: stderrFileName});
 
-        expect(result).toContain("STDERR:");
-        expect(result).toContain("This is an error");
+        expect(ok).toBeTruthy();
+        expect(response).toContain("STDERR:");
+        expect(response).toContain("This is an error");
     });
 
     it("returns timeout error for long-running script", async () => {
         jest.useFakeTimers();
-        const promise = runPythonFile(testDir, timeoutFile);
+        const promise = runPythonFile(testDir, {filePath: timeoutFileName});
         jest.advanceTimersByTime(30_000);
-        const result = await promise;
+        const {response, ok} = await promise;
 
-        expect(result).toContain("Execution timed out after 30 seconds.");
+        expect(ok).toBeFalsy();
+        expect(response).toContain("Execution timed out after 30 seconds.");
         jest.useRealTimers();
     });
 
     it("returns 'No output produced.' if nothing is printed", async () => {
-        const result = await runPythonFile(testDir, noopFile);
+        const {response, ok} = await runPythonFile(testDir, {filePath: noopFileName});
 
-        expect(result).toBe("No output produced.");
+        expect(ok).toBeTruthy();
+        expect(response).toBe("No output produced.");
     });
 })

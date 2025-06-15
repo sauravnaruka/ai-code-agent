@@ -1,46 +1,60 @@
 import path from 'path';
 import fs from "node:fs";
-import {logError} from "../error/errorUtils"
-import {isSubdirectory} from "../path/pathUtils"
+import { logError } from "../error/errorUtils"
+import { isSubdirectory } from "../path/pathUtils"
+import { getValidDirectory } from "./fileUtils";
+import type { FileActionResponse } from "./fileTypes"
 
-type FileInfoResult = [string[], string | null];
+export type GetFilesInfoProps = { directory: string }
 
 export function getFilesInfo(
     workingDirectory: string,
-    directory: string | null = null
-): FileInfoResult {
-    if (!directory) {
-        return [[], `directory is required`];
-    }
-
+    { directory = "./" }: GetFilesInfoProps
+): FileActionResponse {
     const resolvedWorkingDirectory = path.resolve(workingDirectory);
-    const resolvedDirectory = path.resolve(directory);
+    const resolvedDirectory = path.resolve(workingDirectory, directory);
 
     if (!isSubdirectory(resolvedWorkingDirectory, resolvedDirectory)) {
-        return [[], `"${directory}" is not a directory`];
+        return {
+            response: `Error: Cannot list "${directory}" as it is outside the permitted working directory`,
+            ok: false
+        };
+    }
+
+    const { valid } = getValidDirectory(resolvedDirectory);
+    if (!valid) {
+        return {
+            response: `Error: "${directory}" is not a directory`,
+            ok: false
+        }
     }
 
     try {
-        const result = readDirectoryInfo(resolvedDirectory);
-
-        return [result, null];
+        return {
+            response: readDirectoryInfo(resolvedDirectory),
+            ok: true
+        };
     } catch (err) {
-        const errorMessage = logError(err, `${getFilesInfo} Encoutered error reading directory`);
-        return [[], errorMessage];
+        return {
+            response: logError(err, `${getFilesInfo} Encoutered error reading directory`),
+            ok: false
+        };
     }
 }
 
-function readDirectoryInfo(directory: string): string[] {
+function readDirectoryInfo(directory: string): string {
     const items = fs.readdirSync(directory, { withFileTypes: true })
 
-    return items.map((item) => {
+    const filesInfo = items.map((item) => {
         const fullPath = path.join(directory, item.name);
         const stats = fs.statSync(fullPath);
 
         return formatFileStat(item.name, stats.size, item.isDirectory());
     });
+
+    return filesInfo.join("\n")
 }
 
 function formatFileStat(name: string, size: number, isDir: boolean): string {
-    return `${name}: file_size=${size} bytes, is_dir=${isDir}`;
+    return `- ${name}: file_size=${size} bytes, is_dir=${isDir}`;
 }

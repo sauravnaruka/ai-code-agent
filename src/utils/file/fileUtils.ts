@@ -23,3 +23,21 @@ export function getValidFileStats(filePath: string): ValidFileStats {
     }
     return {valid: false}
 }
+
+export function getValidDirectory(filePath: string): ValidFileStats {
+    try{
+        if(!fs.existsSync(filePath)) {
+            return {valid: false}
+        }
+
+        const stats = fs.statSync(filePath);
+        if(!stats.isDirectory()) {
+            return {valid: false}
+        }
+
+        return {valid: true, stats}
+    } catch(err) {
+        logError(err, `[getValidDirectory] Error checking file "${filePath}":`);
+    }
+    return {valid: false}
+}

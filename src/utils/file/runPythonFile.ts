@@ -1,30 +1,42 @@
 import path from "node:path";
 import { spawn } from "node:child_process";
-import {isSubdirectory} from "../path/pathUtils"
-import {getValidFileStats} from "../file/fileUtils";
+import { isSubdirectory } from "../path/pathUtils"
+import { getValidFileStats } from "../file/fileUtils";
+import type { FileActionResponse } from "./fileTypes"
 
-export async function runPythonFile(workingDirectory: string, filePath: string) {
-    if(!filePath.endsWith('.py')){
-        return `Error: "${filePath}" is not a Python file.`
+export type RunPythonFileProps = { filePath: string };
+
+export async function runPythonFile(workingDirectory: string, { filePath }: RunPythonFileProps): Promise<FileActionResponse> {
+    if (!filePath.endsWith('.py')) {
+        return {
+            response: `Error: "${filePath}" is not a Python file.`,
+            ok: false
+        }
     }
 
     const resolvedWorkingDirectory = path.resolve(workingDirectory);
-    const resolvedFilePath = path.resolve(filePath);
+    const resolvedFilePath = path.resolve(workingDirectory, filePath);
 
-    if(!isSubdirectory(resolvedWorkingDirectory, resolvedFilePath)) {
-        return `Error: Cannot execute "${filePath}" as it is outside the permitted working directory`
+    if (!isSubdirectory(resolvedWorkingDirectory, resolvedFilePath)) {
+        return {
+            response: `Error: Cannot execute "${filePath}" as it is outside the permitted working directory`,
+            ok: false
+        }
     }
 
-    const {valid, stats} = getValidFileStats(resolvedFilePath);
-    if(!valid ){
-        return `Error: File "${filePath}" not found.`
+    const { valid, stats } = getValidFileStats(resolvedFilePath);
+    if (!valid) {
+        return {
+            response: `Error: File "${filePath}" not found.`,
+            ok: false
+        }
     }
 
     try {
-        const output = await runWithTimeout(resolvedWorkingDirectory, resolvedFilePath, 30000);
-        return output;
+        const response = await runWithTimeout(resolvedWorkingDirectory, resolvedFilePath, 30000);
+        return { response, ok: true };
     } catch (err: any) {
-        return `Error during execution: ${err.message}`;
+        return { response: `Error during execution: ${err.message}`, ok: false };
     }
 }
 

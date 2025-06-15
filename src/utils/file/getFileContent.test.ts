@@ -18,29 +18,31 @@ describe("getFileContent", () => {
     });
 
     it('returns the truncated file content', () => {
+        const fileName = 'longfile.txt';
         const longContent = 'a'.repeat(1200);
-        const longFilePath = path.join(testDir, 'longfile.text');
-
+        const longFilePath = path.join(testDir, fileName);
         fs.writeFileSync(longFilePath, longContent);
 
-        const {file, error} = getFileContent(testDir, longFilePath);
+        const {response, ok} = getFileContent(testDir, {filePath: fileName});
 
-        expect(error).toBeUndefined()
-        expect(file?.startsWith('a'.repeat(1000))).toBe(true)
-        expect(file).toContain(`"${longFilePath}" truncated at 1000 characters`)
+        expect(ok).toBeTruthy();
+        expect(response.startsWith('a'.repeat(1000))).toBe(true)
+        expect(response).toContain(`"${fileName}" truncated at 1000 characters`)
     })
 
     it('returns an error if file is outside the working directory', () => {
-        const filePath = "../main.js";
-        const { file, error } = getFileContent(testDir, filePath);
+        const filePath = path.join("..", "main.js");
+        const {response, ok} = getFileContent(testDir, {filePath});
 
-        expect(error).toBe(`Error: Cannot read "${filePath}" as it is outside the permitted working directory`)
+        expect(ok).toBeFalsy();
+        expect(response).toBe(`Error: Cannot read "${filePath}" as it is outside the permitted working directory`)
     })
 
     it('returns an error if file is not found', () => {
-        const filePath = testDir + "/main.js";
-        const { file, error } = getFileContent(testDir, filePath);
+        const filePath = "main.js";
+        const {response, ok} = getFileContent(testDir, {filePath});
 
-        expect(error).toBe(`Error: File not found or is not a regular file: "${filePath}"`)
+        expect(ok).toBeFalsy();
+        expect(response).toBe(`Error: File not found or is not a regular file: "${filePath}"`)
     })
 })

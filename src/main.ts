@@ -1,7 +1,8 @@
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import { program } from 'commander'
-import { SYSTEM_PROMPT } from "./prompts";
+import { SYSTEM_PROMPT } from "./llmPrompts";
+import { callFunctions } from "./llmFunctionCaller";
 import { SCHEMA_GET_FILES_INFO, SCHEMA_GET_FILE_CONTENT, SCHEMA_RUN_PYTHON_FILE, SCHEMA_WRITE_FILE } from "./llmDefinitions";
 
 dotenv.config();
@@ -51,9 +52,13 @@ async function main() {
         })
 
         console.log("AI:", response.text);
-        response.functionCalls?.forEach(f => {
-            console.log(`Calling function: ${f.name}(${JSON.stringify(f.args)})`);
-        })
+        if(response.functionCalls){
+            const responses = await callFunctions(response.functionCalls, options.verbose ?? false);
+
+            for(const response of responses){
+                console.log(response?.parts?.[0]?.functionResponse?.response)
+            }
+        }
 
         const usage = response.usageMetadata;
         if (options.verbose && usage) {
@@ -68,9 +73,7 @@ async function main() {
             console.error("unknown error:", err);
         }
     }
-};
-
-
+}
 
 
 main();

@@ -18,23 +18,25 @@ describe("writeFile.ts", () => {
     });
 
     it("writes content into the file", () => {
-        const filePath = path.join(testDir, "sample.txt");
+        const filePath = "sample.txt";
         const content = "Sample text";
-        const result = writeFile(testDir, filePath, "Sample text");
+        const {response, ok} = writeFile(testDir, {filePath, content: "Sample text"});
 
-        expect(result).toContain(`Successfully wrote to "${filePath}"`);
+        expect(ok).toBeTruthy();
+        expect(response).toContain(`Successfully wrote to "${filePath}"`);
 
-        const resolvedFilePath = path.resolve(filePath);
+        const resolvedFilePath = path.resolve(testDir, filePath);
         let writtenContent = fs.readFileSync(resolvedFilePath, { encoding: 'utf-8' });
         expect(writtenContent).toBe(content);
     })
 
 
     it("returns error when file path is outside of the working directory", () => {
-        const outsidePath = path.resolve(testDir, '..', 'outside.txt');
-        const result = writeFile(testDir, outsidePath, "Sample text");
+        const outsidePath = "../outside.txt";
+        const {response, ok} = writeFile(testDir, {filePath: outsidePath, content: "Sample text"});
 
-        expect(result).toContain(`Error: Cannot write to "${outsidePath}" as it is outside the permitted working directory`)
+        expect(ok).toBeFalsy();
+        expect(response).toContain(`Error: Cannot write to "${outsidePath}" as it is outside the permitted working directory`)
     })
 
     it("handles file system error", () => {
@@ -42,8 +44,11 @@ describe("writeFile.ts", () => {
             throw new Error("Disk full");
         });
 
-        const filePath = path.join(testDir, "sample.txt");
-        const result = writeFile(testDir, filePath, "text");
-        expect(result).toContain("Disk full");
+        const filePath = "sample.txt";
+        const {response, ok} = writeFile(testDir, {filePath, content: "text"});
+
+        expect(ok).toBeFalsy();
+        expect(response).toContain("Disk full");
+        expect(response).toContain("Error:");
     });
 })
