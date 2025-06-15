@@ -1,5 +1,7 @@
 import path from 'path';
 import fs from "node:fs";
+import {logError} from "../error/errorUtils"
+import {isSubdirectory} from "../path/pathUtils"
 
 type FileInfoResult = [string[], string | null];
 
@@ -23,10 +25,9 @@ export function getFilesInfo(
 
         return [result, null];
     } catch (err) {
-        const errorMessage = logError(err);
+        const errorMessage = logError(err, `${getFilesInfo} Encoutered error reading directory`);
         return [[], errorMessage];
     }
-
 }
 
 function readDirectoryInfo(directory: string): string[] {
@@ -40,23 +41,6 @@ function readDirectoryInfo(directory: string): string[] {
     });
 }
 
-export function isSubdirectory(workingDirectory: string, directory: string): boolean {
-    return directory.startsWith(workingDirectory)
-}
-
 function formatFileStat(name: string, size: number, isDir: boolean): string {
     return `${name}: file_size=${size} bytes, is_dir=${isDir}`;
-}
-
-function logError(err: unknown): string {
-    let errorMessage = ""
-    if (err instanceof Error) {
-        errorMessage = "Encoutered error reading directory" + err.message
-        console.log(errorMessage)
-    } else {
-        errorMessage = "Unkown error " + err
-        console.log(errorMessage);
-    }
-
-    return errorMessage;
 }

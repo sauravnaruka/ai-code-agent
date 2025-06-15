@@ -12,6 +12,7 @@ module.exports = {
   rootDir: "./",
   coverageDirectory: 'coverage',
   collectCoverage: true,
+  restoreMocks: true,
   testMatch: ['**/*.test.ts'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/']
 };

@@ -1,6 +1,7 @@
 import path from "node:path"
 import fs from "node:fs";
-import {isSubdirectory} from "./getFilesInfo";
+import {isSubdirectory} from "../path/pathUtils";
+import {getValidFileStats} from "./fileUtils"
 
 type FileContent =
   | { file: string; error?: never }
@@ -22,29 +23,7 @@ export function getFileContent(workingDirectory: string, filePath: string): File
 
     let content = fs.readFileSync(resolvedFilePath, {encoding: 'utf-8'})
     if(content.length > 1000){
-        content = content.slice(0, 1000) + ` "${filePath}" truncated at 1000 characters`
+        content = content.slice(0, 1000) + `... "${filePath}" truncated at 1000 characters`
     }
     return {file: content}
-}
-
-type ValidFileStats = 
-    | {valid: true, stats: fs.Stats}
-    | {valid: false, stats?: never}
-
-function getValidFileStats(filePath: string): ValidFileStats {
-    try{
-        if(!fs.existsSync(filePath)) {
-            return {valid: false}
-        }
-
-        const stats = fs.statSync(filePath);
-        if(!stats.isFile()) {
-            return {valid: false}
-        }
-
-        return {valid: true, stats}
-    } catch(err) {
-        console.log(err);
-    }
-    return {valid: false}
 }

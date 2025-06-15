@@ -23,7 +23,7 @@ describe("getFileContent", () => {
         fs.rmSync(testDir, { recursive: true, force: true });
     });
 
-    it('returs the truncated file content', () => {
+    it('returns the truncated file content', () => {
         const longContent = 'a'.repeat(1200);
         const longFilePath = path.join(testDir, 'longfile.text');
 
@@ -36,14 +36,14 @@ describe("getFileContent", () => {
         expect(file).toContain(`"${longFilePath}" truncated at 1000 characters`)
     })
 
-    it.skip('returns an error if file is outside the working directory', () => {
+    it('returns an error if file is outside the working directory', () => {
         const filePath = "../main.js";
         const { file, error } = getFileContent(testDir, filePath);
 
         expect(error).toBe(`Error: Cannot read "${filePath}" as it is outside the permitted working directory`)
     })
 
-    it.skip('returns an error if file is not found', () => {
+    it('returns an error if file is not found', () => {
         const filePath = testDir + "/main.js";
         const { file, error } = getFileContent(testDir, filePath);
 
