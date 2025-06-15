@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Content } from '@google/genai';
 import { program } from 'commander'
 import { SYSTEM_PROMPT } from "./llmPrompts";
 import { callFunctions } from "./llmFunctionCaller";
@@ -25,7 +25,7 @@ async function main() {
         process.exit(1);
     }
 
-    const messages = [
+    const messages: Content[] = [
         {
             role: "user",
             parts: [{ text: userPrompt }]
@@ -34,33 +34,50 @@ async function main() {
 
     const ai = new GoogleGenAI({ apiKey })
 
+    let response;
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-001',
-            contents: userPrompt,
-            config: {
-                systemInstruction: SYSTEM_PROMPT,
-                tools: [{
-                    functionDeclarations: [
-                        SCHEMA_GET_FILES_INFO,
-                        SCHEMA_GET_FILE_CONTENT,
-                        SCHEMA_RUN_PYTHON_FILE,
-                        SCHEMA_WRITE_FILE
-                    ]
-                }]
-            }
-        })
+        for (let i = 0; i < 20; i++) {
+            response = await ai.models.generateContent({
+                model: 'gemini-2.0-flash-001',
+                contents: messages,
+                config: {
+                    systemInstruction: SYSTEM_PROMPT,
+                    tools: [{
+                        functionDeclarations: [
+                            SCHEMA_GET_FILES_INFO,
+                            SCHEMA_GET_FILE_CONTENT,
+                            SCHEMA_RUN_PYTHON_FILE,
+                            SCHEMA_WRITE_FILE
+                        ]
+                    }]
+                }
+            })
 
-        console.log("AI:", response.text);
-        if(response.functionCalls){
-            const responses = await callFunctions(response.functionCalls, options.verbose ?? false);
+            let functionCalled = false;
 
-            for(const response of responses){
-                console.log(response?.parts?.[0]?.functionResponse?.response)
+            response.candidates?.forEach((candidate)=>{
+                if(candidate.content){
+                    messages.push(candidate.content)
+                    console.log(candidate.content?.parts?.[0]?.functionResponse?.response);
+                }
+            })
+
+            if (response.functionCalls) {
+                functionCalled = true;
+                const responses = await callFunctions(response.functionCalls, options.verbose ?? false);
+
+                for (const response of responses) {
+                    console.log(response?.parts?.[0]?.functionResponse?.response);
+                    messages.push(response)
+                }
             }
+
+            if(!functionCalled) break;
         }
 
-        const usage = response.usageMetadata;
+        console.log("AI:", response?.text);
+
+        const usage = response?.usageMetadata;
         if (options.verbose && usage) {
             console.log(`Prompt tokens: ${usage.promptTokenCount}`);
             console.log(`Response tokens: ${usage.candidatesTokenCount}`);
