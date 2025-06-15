@@ -1,0 +1,1 @@
+export type FileActionResponse = {response: string, ok: boolean};
