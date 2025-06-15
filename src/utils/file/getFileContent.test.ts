@@ -11,12 +11,6 @@ describe("getFileContent", () => {
 
         const subDir = path.join(testDir, 'src');
         fs.mkdirSync(subDir);
-
-        const readmePath = path.join(testDir, 'README.md');
-        fs.writeFileSync(readmePath, 'Sample readme');
-
-        const pkgJsonPath = path.join(testDir, 'package.json');
-        fs.writeFileSync(pkgJsonPath, '{"name": "test"}');
     })
 
     afterAll(() => {
