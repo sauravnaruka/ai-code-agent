@@ -40,7 +40,7 @@ function readDirectoryInfo(directory: string): string[] {
     });
 }
 
-function isSubdirectory(workingDirectory: string, directory: string): boolean {
+export function isSubdirectory(workingDirectory: string, directory: string): boolean {
     return directory.startsWith(workingDirectory)
 }
 
